@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQuiz Real-Time</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; background: #f0f4f8; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: all 0.3s; }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4); }
+        .timer-bar { transition: width 1s linear; }
+        .answer-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .answer-btn:active { transform: scale(0.95); }
+        .hidden-section { display: none; }
+        .active-mode { background-color: #6366f1; color: white !important; border-color: #6366f1; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-4xl glass rounded-3xl shadow-2xl overflow-hidden p-6 md:p-10">
+        
+        <!-- 1. Start Menu -->
+        <section id="menu-section" class="text-center">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-8">EduQuiz 🚀</h1>
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Pilih Mode Bermain</label>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="setMode('bot')" id="btn-bot" class="px-6 py-2 rounded-full border-2 border-indigo-500 text-indigo-500 font-bold active-mode">Lawan Bot</button>
+                        <button onclick="setMode('multi')" id="btn-multi" class="px-6 py-2 rounded-full border-2 border-gray-300 text-gray-400 font-bold">Multiplayer</button>
+                    </div>
+                </div>
+
+                <div id="bot-settings" class="p-4 bg-indigo-50 rounded-xl">
+                    <label class="block text-sm font-semibold text-gray-700">Kepintaran Bot: <span id="bot-iq-val">80</span>%</label>
+                    <input type="range" id="bot-iq" min="0" max="100" value="80" class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer mt-2" oninput="document.getElementById('bot-iq-val').innerText = this.value">
+                </div>
+
+                <div id="player-settings" class="hidden-section">
+                    <input type="text" id="player-name" placeholder="Masukkan Nama Anda" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-400 outline-none">
+                    <p class="text-xs text-gray-500 mt-2">*Gunakan nama unik untuk sinkronisasi multiplayer</p>
+                </div>
+
+                <button onclick="goToSetup()" class="w-full btn-gradient text-white py-4 rounded-xl font-bold text-lg">Mulai Sekarang</button>
+            </div>
+        </section>
+
+        <!-- 2. Setup Section -->
+        <section id="setup-section" class="hidden-section">
+            <h2 class="text-2xl font-bold text-indigo-800 mb-6 text-center">Konfigurasi Kuis</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block font-semibold mb-2">Pilih Kelas</label>
+                    <select id="select-kelas" class="w-full p-3 rounded-lg border border-gray-300 bg-white">
+                        <option value="1SD">Kelas 1 SD</option><option value="2SD">Kelas 2 SD</option>
+                        <option value="3SD">Kelas 3 SD</option><option value="4SD">Kelas 4 SD</option>
+                        <option value="5SD">Kelas 5 SD</option><option value="6SD">Kelas 6 SD</option>
+                        <option value="7SMP">Kelas 7 SMP</option><option value="8SMP">Kelas 8 SMP</option>
+                        <option value="9SMP">Kelas 9 SMP</option><option value="10SMA">Kelas 10 SMA</option>
+                        <option value="11SMA">Kelas 11 SMA</option><option value="12SMA">Kelas 12 SMA</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold mb-2">Mata Pelajaran</label>
+                    <select id="select-mapel" class="w-full p-3 rounded-lg border border-gray-300 bg-white">
+                        <option value="IPA">IPA</option><option value="IPS">IPS</option>
+                        <option value="SEJARAH">Sejarah</option><option value="MATEMATIKA">Matematika</option>
+                        <option value="AGAMA">Agama</option><option value="PPKN">PPKN</option>
+                        <option value="SENIBUDAYA">Seni Budaya</option><option value="OLAHRAGA">Olahraga</option>
+                        <option value="BINGGRIS">Bahasa Inggris</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block font-semibold mb-2">Jumlah Soal: <span id="soal-count-val">10</span></label>
+                    <input type="range" id="soal-count" min="5" max="50" step="5" value="10" class="w-full" oninput="document.getElementById('soal-count-val').innerText = this.value">
+                </div>
+            </div>
+            <div class="flex gap-4 mt-8">
+                <button onclick="backToMenu()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold">Kembali</button>
+                <button id="btn-launch-game" onclick="startGame()" class="flex-2 btn-gradient text-white py-3 px-10 rounded-xl font-bold">Siapkan Pertandingan!</button>
+            </div>
+        </section>
+
+        <!-- 3. Game Section -->
+        <section id="game-section" class="hidden-section">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-sm text-gray-500" id="current-info">Kelas - Mapel</p>
+                    <p class="font-bold text-indigo-600" id="question-number">Soal 1</p>
+                </div>
+                <div class="text-right">
+                    <div id="timer-text" class="text-2xl font-bold text-orange-500">30</div>
+                </div>
+            </div>
+            <div class="w-full bg-gray-200 h-2 rounded-full mb-8 overflow-hidden">
+                <div id="timer-bar" class="h-full bg-orange-500 timer-bar" style="width: 100%;"></div>
+            </div>
+            <div class="mb-8">
+                <h3 id="question-text" class="text-xl md:text-2xl font-semibold text-gray-800 leading-relaxed mb-6 text-center">...</h3>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+            <div id="leaderboard-mini" class="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Skor</h4>
+                <div id="score-list" class="flex flex-wrap gap-4"></div>
+            </div>
+        </section>
+
+        <!-- 4. Result Section -->
+        <section id="result-section" class="hidden-section text-center">
+            <div class="mb-8">
+                <div id="result-icon" class="text-6xl mb-4">🏆</div>
+                <h2 class="text-3xl font-bold text-indigo-800">Selesai!</h2>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-green-100 p-4 rounded-2xl">
+                    <p class="text-xs font-bold text-green-600">BENAR</p>
+                    <p id="res-correct" class="text-3xl font-bold text-green-700">0</p>
+                </div>
+                <div class="bg-red-100 p-4 rounded-2xl">
+                    <p class="text-xs font-bold text-red-600">SALAH</p>
+                    <p id="res-wrong" class="text-3xl font-bold text-red-700">0</p>
+                </div>
+                <div class="bg-indigo-100 p-4 rounded-2xl">
+                    <p class="text-xs font-bold text-indigo-600">NILAI</p>
+                    <p id="res-total" class="text-3xl font-bold text-indigo-700">0</p>
+                </div>
+            </div>
+            <div id="final-leaderboard" class="mb-8"></div>
+            <button onclick="location.reload()" class="w-full btn-gradient text-white py-4 rounded-xl font-bold">Main Lagi</button>
+        </section>
+    </div>
+
+    <div id="notif" class="fixed bottom-4 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50">
+        <span id="notif-text">Pesan</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD--Q5M0AwnbQsr85y91dgeaYXox03fi6M",
+            authDomain: "gameseru-ed903.firebaseapp.com",
+            projectId: "gameseru-ed903",
+            storageBucket: "gameseru-ed903.firebasestorage.app",
+            messagingSenderId: "289883987670",
+            appId: "1:289883987670:web:ca1f4aa8d328947fd3b377"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const db = getFirestore(fbApp);
+        const auth = getAuth(fbApp);
+        const appId = "eduquiz-final-v1";
+
+        let gameState = {
+            mode: 'bot',
+            playerName: 'Pemain',
+            botIQ: 80,
+            kelas: '1SD',
+            mapel: 'IPA',
+            limit: 10,
+            currentQuestionIndex: 0,
+            score: 0,
+            wrong: 0,
+            questions: [],
+            timeLeft: 30,
+            timer: null,
+            userId: null,
+            gameId: 'room-' + Math.floor(Math.random() * 1000000)
+        };
+
+        let botState = { score: 0, name: "Bot (AI)" };
+
+        // GENERATOR BANK SOAL (Menghasilkan ribuan variasi soal dinamis)
+        function generateQuestions(kelas, mapel, count) {
+            const bank = [];
+            const subjects = {
+                MATEMATIKA: (i) => ({ q: `Berapakah hasil dari ${i * 2} + ${i + 5}?`, a: [`${i * 3 + 4}`, `${i * 3 + 5}`, `${i * 3 + 6}`, `${i * 3 + 3}`], c: 1 }),
+                IPA: (i) => {
+                    const themes = ["Planet", "Hewan", "Tumbuhan", "Energi"];
+                    const theme = themes[i % 4];
+                    if(theme === "Planet") return { q: `Planet ke-${(i%8)+1} dalam tata surya adalah?`, a: ["Merkurius", "Venus", "Bumi", "Mars"], c: i%4 };
+                    return { q: `Alat pernapasan pada ikan nomor ${i} adalah...`, a: ["Paru-paru", "Insang", "Trakea", "Kulit"], c: 1 };
+                },
+                BINGGRIS: (i) => ({ q: `What is the English word for nomor ${i}?`, a: ["One", "Number", "Word", "English"], c: 1 }),
+                SEJARAH: (i) => ({ q: `Tokoh sejarah ke-${i} yang memimpin perjuangan adalah...`, a: ["Ir. Soekarno", "Moh. Hatta", "Diponegoro", "Gajah Mada"], c: i%4 })
+            };
+
+            const generator = subjects[mapel] || ((i) => ({ q: `Pertanyaan Umum ${mapel} No ${i}: Apa ibukota negara X?`, a: ["Jakarta", "London", "Paris", "Tokyo"], c: 0 }));
+
+            for (let i = 1; i <= 500; i++) {
+                bank.push(generator(i));
+            }
+            return bank.sort(() => 0.5 - Math.random()).slice(0, count);
+        }
+
+        window.setMode = (mode) => {
+            gameState.mode = mode;
+            document.getElementById('btn-bot').className = mode === 'bot' ? 'px-6 py-2 rounded-full border-2 active-mode font-bold' : 'px-6 py-2 rounded-full border-2 border-gray-300 text-gray-400 font-bold';
+            document.getElementById('btn-multi').className = mode === 'multi' ? 'px-6 py-2 rounded-full border-2 active-mode font-bold' : 'px-6 py-2 rounded-full border-2 border-gray-300 text-gray-400 font-bold';
+            document.getElementById('bot-settings').classList.toggle('hidden-section', mode !== 'bot');
+            document.getElementById('player-settings').classList.toggle('hidden-section', mode !== 'multi');
+        };
+
+        window.goToSetup = () => {
+            if (gameState.mode === 'multi') {
+                gameState.playerName = document.getElementById('player-name').value || "Pemain_" + Math.floor(Math.random()*100);
+            }
+            showSection('setup-section');
+        };
+
+        window.showSection = (id) => {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden-section'));
+            document.getElementById(id).classList.remove('hidden-section');
+        };
+
+        window.backToMenu = () => showSection('menu-section');
+
+        window.startGame = async () => {
+            const btn = document.getElementById('btn-launch-game');
+            btn.disabled = true;
+            btn.innerText = "Mengautentikasi...";
+
+            try {
+                await signInAnonymously(auth);
+                gameState.userId = auth.currentUser.uid;
+                
+                gameState.kelas = document.getElementById('select-kelas').value;
+                gameState.mapel = document.getElementById('select-mapel').value;
+                gameState.limit = parseInt(document.getElementById('soal-count').value);
+                gameState.botIQ = parseInt(document.getElementById('bot-iq').value);
+                gameState.questions = generateQuestions(gameState.kelas, gameState.mapel, gameState.limit);
+
+                if (gameState.mode === 'multi') {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'sessions', gameState.gameId, 'players', gameState.userId), {
+                        name: gameState.playerName, score: 0, finished: false
+                    });
+                    listenToLeaderboard();
+                }
+
+                showSection('game-section');
+                renderQuestion();
+            } catch (e) {
+                console.error(e);
+                alert("Gagal memulai game. Periksa koneksi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Siapkan Pertandingan!";
+            }
+        };
+
+        function renderQuestion() {
+            if (gameState.currentQuestionIndex >= gameState.questions.length) {
+                endGame();
+                return;
+            }
+
+            const q = gameState.questions[gameState.currentQuestionIndex];
+            document.getElementById('current-info').innerText = `${gameState.kelas} - ${gameState.mapel}`;
+            document.getElementById('question-number').innerText = `Soal ${gameState.currentQuestionIndex + 1} / ${gameState.questions.length}`;
+            document.getElementById('question-text').innerText = q.q;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            q.a.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn w-full p-4 bg-white border border-gray-200 rounded-2xl text-left font-medium hover:bg-indigo-50';
+                btn.innerHTML = `<span class="inline-block w-8 h-8 rounded-full bg-gray-100 text-center leading-8 mr-3 font-bold">${String.fromCharCode(65+idx)}</span> ${opt}`;
+                btn.onclick = () => handleAnswer(idx);
+                container.appendChild(btn);
+            });
+
+            startTimer();
+            updateScoreUI();
+        }
+
+        function startTimer() {
+            clearInterval(gameState.timer);
+            gameState.timeLeft = 30;
+            const bar = document.getElementById('timer-bar');
+            const txt = document.getElementById('timer-text');
+            
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                txt.innerText = gameState.timeLeft;
+                bar.style.width = (gameState.timeLeft / 30 * 100) + '%';
+                if(gameState.timeLeft <= 0) handleAnswer(-1);
+            }, 1000);
+        }
+
+        async function handleAnswer(idx) {
+            clearInterval(gameState.timer);
+            const correct = gameState.questions[gameState.currentQuestionIndex].c;
+            
+            if(idx === correct) {
+                gameState.score++;
+                showNotif("Benar! ✨", "green");
+            } else {
+                gameState.wrong++;
+                showNotif("Salah! ❌", "red");
+            }
+
+            if(gameState.mode === 'bot') {
+                if(Math.random() * 100 <= gameState.botIQ) botState.score++;
+            }
+
+            if(gameState.mode === 'multi') {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'sessions', gameState.gameId, 'players', gameState.userId), {
+                    score: gameState.score
+                });
+            }
+
+            gameState.currentQuestionIndex++;
+            setTimeout(renderQuestion, 1000);
+        }
+
+        function updateScoreUI() {
+            const list = document.getElementById('score-list');
+            let html = `<div class="bg-indigo-100 px-3 py-1 rounded-full text-xs font-bold">ANDA: ${gameState.score}</div>`;
+            if(gameState.mode === 'bot') html += `<div class="bg-orange-100 px-3 py-1 rounded-full text-xs font-bold">BOT: ${botState.score}</div>`;
+            list.innerHTML = html;
+        }
+
+        function listenToLeaderboard() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'sessions', gameState.gameId, 'players'), (snap) => {
+                const players = [];
+                snap.forEach(d => players.push(d.data()));
+                window.finalPlayers = players;
+                const list = document.getElementById('score-list');
+                list.innerHTML = players.map(p => `<div class="bg-indigo-100 px-3 py-1 rounded-full text-xs font-bold">${p.name.toUpperCase()}: ${p.score}</div>`).join('');
+            });
+        }
+
+        function endGame() {
+            showSection('result-section');
+            document.getElementById('res-correct').innerText = gameState.score;
+            document.getElementById('res-wrong').innerText = gameState.wrong;
+            document.getElementById('res-total').innerText = gameState.score;
+            
+            const board = document.getElementById('final-leaderboard');
+            if(gameState.mode === 'bot') {
+                board.innerHTML = `<p class="font-bold">${gameState.score > botState.score ? 'Anda Menang!' : 'Bot Menang!'}</p><p>Skor Bot: ${botState.score}</p>`;
+            } else {
+                const sorted = (window.finalPlayers || []).sort((a,b) => b.score - a.score);
+                board.innerHTML = sorted.map((p, i) => `<div class="p-2 border-b">#${i+1} ${p.name} - ${p.score} Poin</div>`).join('');
+            }
+        }
+
+        function showNotif(text, color) {
+            const n = document.getElementById('notif');
+            n.innerText = text;
+            n.className = `fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-lg transition-all duration-300 z-50 ${color === 'green' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            n.style.opacity = 1;
+            setTimeout(() => n.style.opacity = 0, 1000);
+        }
+    </script>
+</body>
+</html>
+
